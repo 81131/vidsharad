@@ -17,8 +17,22 @@ class ConversionParams(BaseModel):
     crf: Optional[int] = 23  # lower = higher quality, larger file
 
 
+class VideoInfo(BaseModel):
+    """Metadata probed from the uploaded video using ffprobe."""
+    codec: Optional[str] = None          # e.g. "h264"
+    width: Optional[int] = None          # pixels
+    height: Optional[int] = None         # pixels
+    fps: Optional[float] = None          # frames per second
+    duration_sec: Optional[float] = None # total length in seconds
+    bitrate_kbps: Optional[int] = None   # overall bitrate in kbps
+    size_bytes: Optional[int] = None     # file size
+    format_name: Optional[str] = None    # container format e.g. "mp4"
+
+
 class JobResponse(BaseModel):
     job_id: str
     status: JobStatus
     error: Optional[str] = None
     output_filename: Optional[str] = None
+    progress: Optional[int] = None       # 0-100 during encoding
+    video_info: Optional[VideoInfo] = None
