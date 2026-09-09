@@ -2,7 +2,7 @@
 
 A self-hosted web application for converting, resizing, compressing, and re-encoding videos — all through a clean browser UI. Built with **FastAPI + FFmpeg** on the backend and **React (Vite)** on the frontend, served via **nginx**, and containerized end-to-end with **Docker Compose**.
 
-> ⚠️ **This is an MVP prototype.** It currently runs entirely on CPU. For production workloads or large video files, GPU-accelerated encoding is recommended (see [GPU Integration](#gpu-integration) below).
+> ⚠️ **This is an MVP prototype.** The job store is in-memory and will not survive backend container restarts. For production workloads, configure a Redis backend.
 
 ---
 
@@ -194,42 +194,35 @@ docker compose down -v
 
 ## GPU Integration
 
-> **Note:** This section describes the planned upgrade path. GPU support is **not yet implemented**.
+Vidsharad supports **hardware-accelerated GPU encoding** for H.264 outputs to drastically improve conversion speeds, especially for large files or high resolutions.
 
-The current MVP encodes video using FFmpeg on the **CPU** (`libx264` / `libvpx-vp9`). For faster encoding — especially at high resolutions — FFmpeg supports several hardware-accelerated encoders:
+At startup, the backend probes FFmpeg to automatically detect available hardware encoders and runs a quick 1-frame test to ensure the host drivers are properly loaded and functional. 
 
-| GPU vendor | Encoder (replaces `libx264`) | Notes |
-|---|---|---|
-| NVIDIA | `h264_nvenc` | Requires NVIDIA drivers + `nvidia-container-toolkit` |
-| AMD | `h264_amf` | ROCm / AMDGPU |
-| Intel | `h264_qsv` | Intel Quick Sync |
-| Apple Silicon | `h264_videotoolbox` | macOS only, not available in Docker |
+The fallback chain is:
+1. **NVIDIA** (`h264_nvenc`) — *highest priority*
+2. **Intel Quick Sync** (`h264_qsv`)
+3. **AMD AMF** (`h264_amf`)
+4. **CPU Fallback** (`libx264`) — *used automatically if no GPU is found*
 
-### What needs to change
+> **Note:** WebM outputs (VP9) will always use the CPU (`libvpx-vp9`), as VP9 GPU encoding is not uniformly supported across hardware families.
 
-**1. `backend/app/ffmpeg_builder.py`** — update `_FORMAT_CODEC_MAP` to use hardware encoder names and pass device flags to `ffmpeg.input()`.
+### Requirements for NVIDIA GPUs
 
-**2. `backend/Dockerfile`** — use a CUDA-enabled base image:
+To use an NVIDIA GPU, you must have the **NVIDIA Container Toolkit** installed on your Docker host.
 
-```dockerfile
-FROM nvidia/cuda:12.x.x-runtime-ubuntu22.04
+1. Install the toolkit for your OS (e.g. `nvidia-container-toolkit`).
+2. Configure the Docker daemon to use the `nvidia` runtime:
+   ```bash
+   sudo nvidia-ctk runtime configure --runtime=docker
+   sudo systemctl restart docker
+   ```
+3. Start the containers. The `docker-compose.yml` is already configured to pass all GPUs to the backend container.
+
+You can verify GPU detection in the UI (it will show a green "GPU" status indicator at the top of the card) or by querying the API:
+```bash
+curl -s http://localhost/api/system
+# {"gpu_available":true,"encoder":"h264_nvenc"}
 ```
-
-**3. `docker-compose.yml`** — expose the GPU to the backend container:
-
-```yaml
-services:
-  backend:
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-```
-
-**4.** Add a **runtime codec detection** step at startup to fall back to CPU gracefully if no GPU is available.
 
 ---
 
@@ -267,7 +260,6 @@ vidsharad/
 - **No authentication** — the API is open. Add an API key or OAuth before exposing to the internet.
 - **No file size limit enforcement on the backend** — currently only enforced at the nginx layer (500 MB).
 - **Single worker** — uvicorn runs with one process. Use `--workers N` or Gunicorn for concurrency.
-- **CPU encoding only** — see [GPU Integration](#gpu-integration) above.
 
 ---
 
