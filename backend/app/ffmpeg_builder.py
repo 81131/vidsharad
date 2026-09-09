@@ -23,7 +23,12 @@ def apply_resolution(stream, resolution: str | None):
     if not resolution:
         return stream
 
-    width, height = resolution.lower().split("x")
+    parts = resolution.lower().split("x")
+    if len(parts) != 2:
+        raise ValueError(
+            f"Invalid resolution format '{resolution}'. Expected WIDTHxHEIGHT (e.g. '1920x1080')."
+        )
+    width, height = parts
     return stream.filter("scale", width, height)
 
 
@@ -55,17 +60,23 @@ def build_output_kwargs(params: ConversionParams) -> Dict[str, Any]:
     framerate) are conceptually different from visual transformations
     (scale, crop, watermark).
     """
+    # Maps container format to a compatible video codec.
+    # libvpx-vp9 is required for WebM; libx264 is the safe default for MP4/MKV.
+    _FORMAT_CODEC_MAP: Dict[str, str] = {
+        "mp4": "libx264",
+        "mkv": "libx264",
+        "webm": "libvpx-vp9",
+    }
+
     output_kwargs: Dict[str, Any] = {}
 
     if params.framerate:
         output_kwargs["r"] = params.framerate
 
     if params.crf is not None:
-        # CRF is only meaningful with an encoder that supports it -
-        # libx264 is a safe, universal default for MVP. If you add support
-        # for other codecs later, this is the one place that needs updating.
+        vcodec = _FORMAT_CODEC_MAP.get(params.output_format, "libx264")
         output_kwargs["crf"] = params.crf
-        output_kwargs["vcodec"] = "libx264"
+        output_kwargs["vcodec"] = vcodec
 
     return output_kwargs
 
