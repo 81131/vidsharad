@@ -29,7 +29,7 @@ def _test_encoder(encoder: str, hwaccel: str | None = None) -> bool:
     if hwaccel:
         cmd += ["-hwaccel", hwaccel]
     cmd += [
-        "-f", "lavfi", "-i", "nullsrc=s=64x64:d=0.1",
+        "-f", "lavfi", "-i", "nullsrc=s=256x256:d=0.1",
         "-vframes", "1", "-vcodec", encoder,
         "-f", "null", "-"
     ]
