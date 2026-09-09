@@ -94,7 +94,13 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
 
     return output_kwargs
 
-def build_stream(input_path: str, output_path: str, params: ConversionParams):
+def build_stream(
+    input_path: str,
+    output_path: str,
+    params: ConversionParams,
+    h264_encoder: str = "libx264",
+    h264_extra: dict | None = None,
+):
     """
     Assembles the full ffmpeg-python stream graph: input -> filters -> output.
     This is the single place that composes the smaller pieces above - if you
@@ -103,5 +109,5 @@ def build_stream(input_path: str, output_path: str, params: ConversionParams):
     """
     stream = ffmpeg.input(input_path)
     stream = apply_filters(stream, params)
-    output_kwargs = build_output_kwargs(params)
+    output_kwargs = build_output_kwargs(params, h264_encoder, h264_extra or {})
     return ffmpeg.output(stream, output_path, **output_kwargs)
