@@ -75,7 +75,11 @@ async def upload_video(
     # this response is sent to the client. The user gets their job_id back
     # immediately instead of the HTTP request hanging open for however long
     # the conversion takes.
-    background_tasks.add_task(convert_video, job_id, input_path, output_path, params)
+    background_tasks.add_task(
+        convert_video,
+        job_id, input_path, output_path, params,
+        H264_ENCODER, H264_EXTRA_KWARGS,
+    )
 
     return JobResponse(job_id=job_id, status=JobStatus.QUEUED)
 
