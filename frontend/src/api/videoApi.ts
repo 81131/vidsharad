@@ -1,5 +1,11 @@
-import type { ConversionParams, JobResponse } from "../types/job";
+import type { ConversionParams, JobResponse, SystemInfo } from "../types/job";
 const API_BASE = "/api";
+
+export async function getSystemInfo(): Promise<SystemInfo> {
+  const res = await fetch(`${API_BASE}/system`);
+  if (!res.ok) throw new Error("Failed to fetch system info");
+  return res.json();
+}
 
 export async function uploadVideo(file: File, params: ConversionParams): Promise<JobResponse> {
   const formData = new FormData();

@@ -21,6 +21,8 @@ def create_job(job_id: str) -> None:
         "status": JobStatus.QUEUED,
         "error": None,
         "output_filename": None,
+        "progress": 0,
+        "video_info": None,
         "created_at": datetime.utcnow().isoformat(),
     }
 
