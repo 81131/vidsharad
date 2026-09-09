@@ -52,7 +52,8 @@ def apply_filters(stream, params: ConversionParams):
     return stream
 
 
-def build_output_kwargs(params: ConversionParams) -> Dict[str, Any]:
+
+def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra: dict) -> Dict[str, Any]:
     """
     Builds the keyword arguments passed to ffmpeg.output() - the equivalent
     of assembling command-line flags like -r, -crf, -vcodec. Kept separate
@@ -62,10 +63,10 @@ def build_output_kwargs(params: ConversionParams) -> Dict[str, Any]:
     """
     # Maps container format to a compatible video codec.
     # libvpx-vp9 is required for WebM; libx264 is the safe default for MP4/MKV.
-    _FORMAT_CODEC_MAP: Dict[str, str] = {
-        "mp4": "libx264",
-        "mkv": "libx264",
-        "webm": "libvpx-vp9",
+    _FORMAT_CODEC_MAP = {
+        "mp4":  h264_encoder,
+        "mkv":  h264_encoder,
+        "webm": "libvpx-vp9",   
     }
 
     output_kwargs: Dict[str, Any] = {}
@@ -73,15 +74,33 @@ def build_output_kwargs(params: ConversionParams) -> Dict[str, Any]:
     if params.framerate:
         output_kwargs["r"] = params.framerate
 
+    vcodec = _FORMAT_CODEC_MAP.get(params.output_format, "libx264")
+    output_kwargs["vcodec"] = vcodec
+
+    # Quality flag differs per encoder
     if params.crf is not None:
-        vcodec = _FORMAT_CODEC_MAP.get(params.output_format, "libx264")
-        output_kwargs["crf"] = params.crf
-        output_kwargs["vcodec"] = vcodec
+        if vcodec == "h264_nvenc":
+            output_kwargs["cq"] = params.crf       
+        elif vcodec == "h264_qsv":
+            output_kwargs["q"] = params.crf         
+        elif vcodec == "libvpx-vp9":
+            output_kwargs["crf"] = params.crf       
+            output_kwargs["b:v"] = "0"
+        else:
+            output_kwargs["crf"] = params.crf       
+
+    # Merge any encoder-specific extra kwargs from detection
+    output_kwargs.update({k: v for k, v in h264_extra.items() if v is not None})
 
     return output_kwargs
 
-
-def build_stream(input_path: str, output_path: str, params: ConversionParams):
+def build_stream(
+    input_path: str,
+    output_path: str,
+    params: ConversionParams,
+    h264_encoder: str = "libx264",
+    h264_extra: dict | None = None,
+):
     """
     Assembles the full ffmpeg-python stream graph: input -> filters -> output.
     This is the single place that composes the smaller pieces above - if you
@@ -90,5 +109,5 @@ def build_stream(input_path: str, output_path: str, params: ConversionParams):
     """
     stream = ffmpeg.input(input_path)
     stream = apply_filters(stream, params)
-    output_kwargs = build_output_kwargs(params)
+    output_kwargs = build_output_kwargs(params, h264_encoder, h264_extra or {})
     return ffmpeg.output(stream, output_path, **output_kwargs)
