@@ -19,3 +19,9 @@ export async function uploadVideo(file: File, params: ConversionParams): Promise
   return res.json();
 }
 
+export async function getJobStatus(jobId: string): Promise<JobResponse> {
+  const res = await fetch(`${API_BASE}/status/${jobId}`);
+  if (!res.ok) throw new Error("Failed to fetch status");
+  return res.json();
+}
+
