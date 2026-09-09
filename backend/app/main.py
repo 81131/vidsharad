@@ -1,3 +1,4 @@
+from fileinput import filename
 import os
 import uuid
 import shutil
@@ -48,7 +49,8 @@ async def upload_video(
 
     # Save the uploaded file under a job-specific name so concurrent uploads
     # never collide with each other on disk.
-    input_ext = file.filename.split(".")[-1]
+    filename = file.filename or "upload"
+    input_ext = filename.rsplit(".", 1)[-1] if "." in filename else "bin"
     input_path = os.path.join(UPLOAD_DIR, f"{job_id}.{input_ext}")
 
     with open(input_path, "wb") as buffer:
