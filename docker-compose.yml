@@ -11,6 +11,8 @@ services:
     environment:
       - ENV=production
     restart: unless-stopped
+    networks:
+      - video-manager-net
 
   frontend:
     build:
@@ -22,6 +24,12 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - video-manager-net
+
+networks:
+  video-manager-net:
+    driver: bridge
 
 volumes:
   video_storage:
