@@ -56,7 +56,7 @@ export default function UploadForm() {
   // React 19.2 deprecated React.FormEvent<HTMLFormElement> for onSubmit
   // handlers - it didn't accurately model what actually fires on submit.
   // React.SubmitEvent<HTMLFormElement> is the current replacement.
-  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!file) return;
 
