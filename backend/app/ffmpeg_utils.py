@@ -12,11 +12,18 @@ from app.job_manager import update_job
 from app.models import JobStatus, ConversionParams
 
 
-def convert_video(job_id: str, input_path: str, output_path: str, params: ConversionParams) -> None:
+def convert_video(
+    job_id: str,
+    input_path: str,
+    output_path: str,
+    params: ConversionParams,
+    h264_encoder: str = "libx264",
+    h264_extra: dict | None = None,
+) -> None:
     update_job(job_id, status=JobStatus.PROCESSING)
 
     try:
-        stream = build_stream(input_path, output_path, params)
+        stream = build_stream(input_path, output_path, params, h264_encoder, h264_extra or {})
 
         # overwrite_output=True stops ffmpeg from pausing to ask "overwrite? y/n"
         # in the terminal - which would otherwise hang a background job forever
