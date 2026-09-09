@@ -1,10 +1,29 @@
 # --- Base image ---
-FROM python:3.11-slim
+# nvidia/cuda provides the CUDA 12 runtime needed for NVENC hardware encoding.
+# The app auto-detects the GPU at startup and falls back to CPU (libx264) if
+# no GPU is present, so this image works on machines with or without NVIDIA GPUs.
+FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04
 
-# --- Install system dependencies (FFmpeg binary itself, not the python wrapper) ---
+# --- Prevent interactive prompts during apt installs ---
+ENV DEBIAN_FRONTEND=noninteractive
+
+# --- Tell the NVIDIA container runtime which GPU capabilities to expose ---
+# "video" enables NVENC/NVDEC; "compute" and "utility" are required by CUDA.
+ENV NVIDIA_DRIVER_CAPABILITIES=video,compute,utility
+ENV NVIDIA_VISIBLE_DEVICES=all
+
+# --- Install system dependencies ---
+# python3.11 + pip are not pre-installed in the CUDA base image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    python3.11 \
+    python3.11-distutils \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
+
+# Make "python3" and "pip" resolve to 3.11
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 # --- Set working directory ---
 WORKDIR /app
