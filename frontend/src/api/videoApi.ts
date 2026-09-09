@@ -25,3 +25,6 @@ export async function getJobStatus(jobId: string): Promise<JobResponse> {
   return res.json();
 }
 
+export function getDownloadUrl(jobId: string): string {
+  return `${API_BASE}/download/${jobId}`;
+}
