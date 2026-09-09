@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from app.models import ConversionParams, JobResponse, JobStatus
 from app.job_manager import create_job, get_job
 from app.ffmpeg_utils import convert_video
+from app.gpu_detect import detect_best_h264_encoder
 
 app = FastAPI(title="Video Manager API")
 
@@ -28,6 +29,10 @@ UPLOAD_DIR = "/app/storage/uploads"
 PROCESSED_DIR = "/app/storage/processed"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(PROCESSED_DIR, exist_ok=True)
+
+# Runs once at startup, cached for all requests
+H264_ENCODER, H264_EXTRA_KWARGS = detect_best_h264_encoder()
+
 
 
 @app.get("/health")
