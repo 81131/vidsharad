@@ -10,6 +10,19 @@ services:
       - video_storage:/app/storage   # persists uploaded/processed files across restarts
     environment:
       - ENV=production
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=video,compute,utility
+    # --- GPU passthrough ---
+    # Requires nvidia-container-toolkit installed on the host.
+    # The app detects the GPU at startup and falls back to CPU automatically
+    # if this block is removed or the host has no NVIDIA GPU.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     restart: unless-stopped
     networks:
       - video-manager-net
