@@ -14,11 +14,11 @@ export async function uploadVideo(file: File, params: ConversionParams): Promise
   if (params.framerate) formData.append("framerate", String(params.framerate));
   if (params.resolution) formData.append("resolution", params.resolution);
   if (params.crf !== undefined) formData.append("crf", String(params.crf));
+  formData.append("preset", params.preset ?? "medium");
 
   const res = await fetch(`${API_BASE}/upload`, {
     method: "POST",
-    body: formData, // no Content-Type header set manually - the browser sets
-    // the correct multipart/form-data boundary automatically for FormData
+    body: formData,
   });
 
   if (!res.ok) throw new Error("Upload failed");
