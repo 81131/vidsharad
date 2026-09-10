@@ -14,7 +14,8 @@ class ConversionParams(BaseModel):
     output_format: str = "mp4"
     framerate: Optional[int] = None
     resolution: Optional[str] = None  # e.g. "1920x1080"
-    crf: Optional[int] = 23  # lower = higher quality, larger file
+    crf: Optional[int] = 23           # lower = higher quality, larger file
+    preset: str = "medium"            # encoding speed/compression trade-off
 
 
 class VideoInfo(BaseModel):
