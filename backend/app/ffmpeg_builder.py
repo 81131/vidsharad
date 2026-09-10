@@ -66,7 +66,21 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
     _FORMAT_CODEC_MAP = {
         "mp4":  h264_encoder,
         "mkv":  h264_encoder,
-        "webm": "libvpx-vp9",   
+        "webm": "libvpx-vp9",
+    }
+
+    # Maps a libx264 preset name to the NVENC p-scale (p1=fastest, p7=slowest).
+    # NVENC doesn't accept the same named presets as libx264.
+    _NVENC_PRESET_MAP = {
+        "ultrafast": "p1",
+        "superfast":  "p1",
+        "veryfast":  "p2",
+        "faster":    "p3",
+        "fast":      "p4",
+        "medium":    "p4",
+        "slow":      "p5",
+        "slower":    "p6",
+        "veryslow":  "p7",
     }
 
     output_kwargs: Dict[str, Any] = {}
@@ -80,14 +94,25 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
     # Quality flag differs per encoder
     if params.crf is not None:
         if vcodec == "h264_nvenc":
-            output_kwargs["cq"] = params.crf       
+            output_kwargs["cq"] = params.crf
         elif vcodec == "h264_qsv":
-            output_kwargs["q"] = params.crf         
+            output_kwargs["q"] = params.crf
         elif vcodec == "libvpx-vp9":
-            output_kwargs["crf"] = params.crf       
+            output_kwargs["crf"] = params.crf
             output_kwargs["b:v"] = "0"
         else:
-            output_kwargs["crf"] = params.crf       
+            output_kwargs["crf"] = params.crf
+
+    # Preset: controls the compression/speed trade-off.
+    # Slower = better compression at the same quality level, smaller file.
+    # libx264 and h264_qsv accept the named preset directly;
+    # h264_nvenc uses a numeric p-scale; VP9 has its own cpu-used param
+    # so we leave preset out entirely for WebM.
+    if params.preset and vcodec != "libvpx-vp9":
+        if vcodec == "h264_nvenc":
+            output_kwargs["preset"] = _NVENC_PRESET_MAP.get(params.preset, "p4")
+        else:
+            output_kwargs["preset"] = params.preset
 
     # Merge any encoder-specific extra kwargs from detection
     output_kwargs.update({k: v for k, v in h264_extra.items() if v is not None})
