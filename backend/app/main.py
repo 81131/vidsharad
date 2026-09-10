@@ -93,6 +93,7 @@ async def upload_video(
     framerate: Optional[int] = Form(None),
     resolution: Optional[str] = Form(None),
     crf: Optional[int] = Form(23),
+    preset: str = Form("medium"),
 ):
     job_id = str(uuid.uuid4())
 
@@ -113,6 +114,7 @@ async def upload_video(
         framerate=framerate,
         resolution=resolution,
         crf=crf,
+        preset=preset,
     )
 
     create_job(job_id)

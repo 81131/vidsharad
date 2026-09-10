@@ -1,10 +1,15 @@
 export type JobStatusValue = "queued" | "processing" | "completed" | "failed";
 
+export type PresetValue =
+  | "ultrafast" | "superfast" | "veryfast" | "faster"
+  | "fast" | "medium" | "slow" | "slower" | "veryslow";
+
 export interface ConversionParams {
   outputFormat: string;
   framerate?: number;
   resolution?: string;
   crf?: number;
+  preset?: PresetValue;
 }
 
 export interface VideoInfo {

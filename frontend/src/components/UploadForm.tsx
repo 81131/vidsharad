@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { uploadVideo, getJobStatus, getDownloadUrl, getSystemInfo } from "../api/videoApi";
-import type { JobResponse, VideoInfo, SystemInfo } from "../types/job";
+import type { JobResponse, VideoInfo, SystemInfo, PresetValue } from "../types/job";
 
 type Stage = "idle" | "uploading" | "processing" | "completed" | "failed";
 
@@ -157,6 +157,7 @@ export default function UploadForm() {
   const [resolution, setResolution]     = useState("");
   const [framerate, setFramerate]       = useState("");
   const [crf, setCrf]                   = useState(23);
+  const [preset, setPreset]             = useState<PresetValue>("medium");
 
   // Job state
   const [stage, setStage]       = useState<Stage>("idle");
@@ -218,6 +219,7 @@ export default function UploadForm() {
         resolution: resolution || undefined,
         framerate: framerate ? Number(framerate) : undefined,
         crf,
+        preset,
       });
       // video_info comes back immediately from the upload response
       if (job.video_info) setVideoInfo(job.video_info);
@@ -354,6 +356,32 @@ export default function UploadForm() {
                     onChange={(e) => setCrf(Number(e.target.value))} />
                   <span style={{ fontSize: 11 }}>Smallest</span>
                 </div>
+              </div>
+              {/* Preset spans both columns */}
+              <div className="vc-field" style={{ gridColumn: "1 / -1" }}>
+                <label className="vc-label">
+                  Encoding Preset
+                  {outputFormat === "webm" && (
+                    <span style={{ fontWeight: 400, textTransform: "none", opacity: .65, marginLeft: 6 }}>
+                      · not used for WebM
+                    </span>
+                  )}
+                </label>
+                <select
+                  className="vc-select"
+                  value={preset}
+                  onChange={(e) => setPreset(e.target.value as PresetValue)}
+                  disabled={outputFormat === "webm"}
+                >
+                  <option value="ultrafast">Ultrafast · largest file, fastest encode</option>
+                  <option value="veryfast">Very Fast</option>
+                  <option value="faster">Faster</option>
+                  <option value="fast">Fast</option>
+                  <option value="medium">Medium · balanced (default)</option>
+                  <option value="slow">Slow · better compression</option>
+                  <option value="slower">Slower</option>
+                  <option value="veryslow">Very Slow · smallest file, slowest encode</option>
+                </select>
               </div>
             </div>
 
