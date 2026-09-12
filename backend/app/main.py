@@ -95,6 +95,7 @@ async def upload_video(
     crf: Optional[int] = Form(23),
     preset: str = Form("medium"),
     audio_bitrate: Optional[int] = Form(None),
+    codec: Optional[str] = Form(None),
 ):
     job_id = str(uuid.uuid4())
 
@@ -117,6 +118,7 @@ async def upload_video(
         crf=crf,
         preset=preset,
         audio_bitrate=audio_bitrate,
+        codec=codec,
     )
 
     create_job(job_id)

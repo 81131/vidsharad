@@ -17,6 +17,11 @@ class ConversionParams(BaseModel):
     crf: Optional[int] = 23           # lower = higher quality, larger file
     preset: str = "medium"            # encoding speed/compression trade-off
     audio_bitrate: Optional[int] = None  # kbps, e.g. 128. None = auto/copy
+    resolution: Optional[str] = None       # e.g. "1920x1080"
+    crf: Optional[int] = 23               # lower = higher quality, larger file
+    preset: str = "medium"                # encoding speed/compression trade-off
+    audio_bitrate: Optional[int] = None   # kbps, e.g. 128. None = auto/copy
+    codec: Optional[str] = None           # override video codec (advanced mode)
 
 
 class VideoInfo(BaseModel):

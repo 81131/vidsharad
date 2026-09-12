@@ -146,6 +146,38 @@ const css = `
   text-decoration: none; transition: background .15s;
 }
 .vc-download:hover { background: var(--success); color: #fff; }
+
+/* ── Mode toggle ──────────────────────────────────────────────────── */
+.vc-mode-toggle {
+  display: flex; align-items: center; gap: 0;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px; width: fit-content; align-self: flex-end;
+}
+.vc-mode-btn {
+  padding: 5px 14px; border-radius: 999px; border: none;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  background: transparent; color: var(--text);
+  transition: background .15s, color .15s;
+}
+.vc-mode-btn--active {
+  background: var(--accent); color: #fff;
+}
+
+/* ── Advanced text inputs ─────────────────────────────────────────── */
+.vc-input {
+  width: 100%; padding: 9px 11px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg); font-size: 13px; color: var(--text-h);
+  transition: border-color .15s; box-sizing: border-box;
+}
+.vc-input:hover, .vc-input:focus { border-color: var(--accent); outline: none; }
+.vc-input--error { border-color: var(--error) !important; }
+.vc-input-hint { font-size: 10px; color: var(--text); opacity: .65; margin-top: 2px; }
+.vc-input-hint--error { color: var(--error); opacity: 1; }
+
+/* Two inputs side by side (width × height) */
+.vc-input-pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: center; }
+.vc-input-pair__sep { font-size: 14px; color: var(--text); opacity: .5; text-align: center; }
 `;
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
@@ -159,6 +191,32 @@ export default function UploadForm() {
   const [crf, setCrf]                   = useState(23);
   const [preset, setPreset]             = useState<PresetValue>("medium");
   const [audioBitrate, setAudioBitrate] = useState<number | null>(null); // null = auto
+
+  // Advanced mode
+  const [advancedMode, setAdvancedMode]     = useState(false);
+  const [advWidth, setAdvWidth]             = useState("");
+  const [advHeight, setAdvHeight]           = useState("");
+  const [advFramerate, setAdvFramerate]     = useState("");
+  const [advCrf, setAdvCrf]                 = useState("23");
+  const [advAudioBitrate, setAdvAudioBitrate] = useState("");
+  const [advCodec, setAdvCodec]             = useState("");
+
+  // CRF validation (advanced mode only, range 0–51)
+  const advCrfNum  = parseInt(advCrf, 10);
+  const advCrfValid = advCrf === "" || (!isNaN(advCrfNum) && advCrfNum >= 0 && advCrfNum <= 51);
+
+  // Audio bitrate validation (advanced, 1–9999 kbps)
+  const advAudioNum   = parseInt(advAudioBitrate, 10);
+  const advAudioValid = advAudioBitrate === "" || (!isNaN(advAudioNum) && advAudioNum > 0 && advAudioNum <= 9999);
+
+  // Resolution validation (both must be positive even numbers or both empty)
+  const wNum = parseInt(advWidth, 10);
+  const hNum = parseInt(advHeight, 10);
+  const bothFilled  = advWidth !== "" && advHeight !== "";
+  const eitherFilled = advWidth !== "" || advHeight !== "";
+  const advResValid = !eitherFilled || (bothFilled && wNum > 0 && wNum % 2 === 0 && hNum > 0 && hNum % 2 === 0);
+
+  const advFormValid = advCrfValid && advAudioValid && advResValid;
 
   // Job state
   const [stage, setStage]       = useState<Stage>("idle");
@@ -224,6 +282,29 @@ export default function UploadForm() {
         audioBitrate: audioBitrate ?? undefined,
       });
       // video_info comes back immediately from the upload response
+      let params;
+      if (advancedMode) {
+        const advRes = bothFilled ? `${wNum}x${hNum}` : undefined;
+        params = {
+          outputFormat,
+          resolution:   advRes,
+          framerate:    advFramerate ? Number(advFramerate) : undefined,
+          crf:          advCrf !== "" ? advCrfNum : undefined,
+          preset,
+          audioBitrate: advAudioBitrate !== "" ? advAudioNum : undefined,
+          codec:        advCodec || undefined,
+        };
+      } else {
+        params = {
+          outputFormat,
+          resolution: resolution || undefined,
+          framerate:  framerate ? Number(framerate) : undefined,
+          crf,
+          preset,
+          audioBitrate: audioBitrate ?? undefined,
+        };
+      }
+      const job = await uploadVideo(file, params);
       if (job.video_info) setVideoInfo(job.video_info);
       setJobId(job.job_id);
       setStage("processing");
@@ -231,6 +312,7 @@ export default function UploadForm() {
   }
 
   const isBusy = stage === "uploading" || stage === "processing";
+  const canSubmit = !!file && !isBusy && (!advancedMode || advFormValid);
 
   return (
     <>
@@ -322,6 +404,14 @@ export default function UploadForm() {
               </div>
             )}
 
+            {/* ── Mode toggle ───────────────────────────────────────────── */}
+            <div className="vc-mode-toggle">
+              <button type="button" className={`vc-mode-btn${!advancedMode ? " vc-mode-btn--active" : ""}`}
+                onClick={() => setAdvancedMode(false)}>Basic</button>
+              <button type="button" className={`vc-mode-btn${advancedMode ? " vc-mode-btn--active" : ""}`}
+                onClick={() => setAdvancedMode(true)}>⚙ Advanced</button>
+            </div>
+
             {/* ── Options ──────────────────────────────────────────────── */}
             <div className="vc-options">
               <div className="vc-field">
@@ -407,10 +497,198 @@ export default function UploadForm() {
                   <option value="320">320 kbps · maximum</option>
                 </select>
               </div>
+              {!advancedMode ? (
+                <>
+                  {/* ── BASIC controls ────────────────────────────── */}
+                  <div className="vc-field">
+                    <label className="vc-label">Output Format</label>
+                    <select className="vc-select" value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)}>
+                      <option value="mp4">MP4 (H.264)</option>
+                      <option value="mkv">MKV (H.264)</option>
+                      <option value="webm">WebM (VP9)</option>
+                    </select>
+                  </div>
+                  <div className="vc-field">
+                    <label className="vc-label">Resolution</label>
+                    <select className="vc-select" value={resolution} onChange={(e) => setResolution(e.target.value)}>
+                      <option value="">Original</option>
+                      <option value="1920x1080">1080p</option>
+                      <option value="1280x720">720p</option>
+                      <option value="854x480">480p</option>
+                    </select>
+                  </div>
+                  <div className="vc-field">
+                    <label className="vc-label">Frame Rate</label>
+                    <select className="vc-select" value={framerate} onChange={(e) => setFramerate(e.target.value)}>
+                      <option value="">Original</option>
+                      <option value="24">24 fps</option>
+                      <option value="30">30 fps</option>
+                      <option value="60">60 fps</option>
+                    </select>
+                  </div>
+                  <div className="vc-field">
+                    <label className="vc-label">Quality (CRF {crf})</label>
+                    <div className="vc-slider-row">
+                      <span style={{ fontSize: 11 }}>Best</span>
+                      <input className="vc-slider" type="range" min={18} max={32} value={crf}
+                        onChange={(e) => setCrf(Number(e.target.value))} />
+                      <span style={{ fontSize: 11 }}>Smallest</span>
+                    </div>
+                  </div>
+                  <div className="vc-field" style={{ gridColumn: "1 / -1" }}>
+                    <label className="vc-label">
+                      Encoding Preset
+                      {outputFormat === "webm" && (
+                        <span style={{ fontWeight: 400, textTransform: "none", opacity: .65, marginLeft: 6 }}>· not used for WebM</span>
+                      )}
+                    </label>
+                    <select className="vc-select" value={preset}
+                      onChange={(e) => setPreset(e.target.value as PresetValue)}
+                      disabled={outputFormat === "webm"}>
+                      <option value="ultrafast">Ultrafast · largest file, fastest encode</option>
+                      <option value="veryfast">Very Fast</option>
+                      <option value="faster">Faster</option>
+                      <option value="fast">Fast</option>
+                      <option value="medium">Medium · balanced (default)</option>
+                      <option value="slow">Slow · better compression</option>
+                      <option value="slower">Slower</option>
+                      <option value="veryslow">Very Slow · smallest file, slowest encode</option>
+                    </select>
+                  </div>
+                  <div className="vc-field" style={{ gridColumn: "1 / -1" }}>
+                    <label className="vc-label">
+                      Audio Bitrate
+                      <span style={{ fontWeight: 400, textTransform: "none", opacity: .65, marginLeft: 6 }}>
+                        · {outputFormat === "webm" ? "Opus" : "AAC"}
+                      </span>
+                    </label>
+                    <select className="vc-select" value={audioBitrate ?? ""}
+                      onChange={(e) => setAudioBitrate(e.target.value === "" ? null : Number(e.target.value))}>
+                      <option value="">Auto (copy source audio)</option>
+                      <option value="64">64 kbps · voice / podcast</option>
+                      <option value="96">96 kbps · compact stereo</option>
+                      <option value="128">128 kbps · standard stereo</option>
+                      <option value="192">192 kbps · high quality</option>
+                      <option value="256">256 kbps · near-transparent</option>
+                      <option value="320">320 kbps · maximum</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* ── ADVANCED controls ─────────────────────────── */}
+                  <div className="vc-field">
+                    <label className="vc-label">Output Format</label>
+                    <select className="vc-select" value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)}>
+                      <optgroup label="Common">
+                        <option value="mp4">MP4</option>
+                        <option value="mkv">MKV (Matroska)</option>
+                        <option value="webm">WebM</option>
+                      </optgroup>
+                      <optgroup label="Legacy / Other">
+                        <option value="avi">AVI</option>
+                        <option value="mov">MOV (QuickTime)</option>
+                        <option value="flv">FLV (Flash)</option>
+                        <option value="ts">TS (MPEG Transport)</option>
+                        <option value="ogv">OGV (Ogg)</option>
+                        <option value="3gp">3GP (Mobile)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                  <div className="vc-field">
+                    <label className="vc-label">Video Codec</label>
+                    <input
+                      className="vc-input"
+                      list="vc-codec-list"
+                      placeholder="Default for format (e.g. libx264)"
+                      value={advCodec}
+                      onChange={(e) => setAdvCodec(e.target.value)}
+                    />
+                    <datalist id="vc-codec-list">
+                      <option value="libx264" />
+                      <option value="libx265" />
+                      <option value="h264_nvenc" />
+                      <option value="hevc_nvenc" />
+                      <option value="libvpx-vp9" />
+                      <option value="libaom-av1" />
+                      <option value="h264_qsv" />
+                      <option value="hevc_qsv" />
+                      <option value="copy" />
+                    </datalist>
+                    <span className="vc-input-hint">Leave blank to use the format default</span>
+                  </div>
+                  <div className="vc-field" style={{ gridColumn: "1 / -1" }}>
+                    <label className="vc-label">Resolution (px)</label>
+                    <div className="vc-input-pair">
+                      <input className={`vc-input${!advResValid ? " vc-input--error" : ""}`}
+                        type="number" min={2} step={2} placeholder="Width"
+                        value={advWidth} onChange={(e) => setAdvWidth(e.target.value)} />
+                      <span className="vc-input-pair__sep">×</span>
+                      <input className={`vc-input${!advResValid ? " vc-input--error" : ""}`}
+                        type="number" min={2} step={2} placeholder="Height"
+                        value={advHeight} onChange={(e) => setAdvHeight(e.target.value)} />
+                    </div>
+                    {!advResValid && (
+                      <span className="vc-input-hint vc-input-hint--error">
+                        Width and height must both be positive even numbers
+                      </span>
+                    )}
+                    {advResValid && <span className="vc-input-hint">Leave blank to keep original. Must be even numbers.</span>}
+                  </div>
+                  <div className="vc-field">
+                    <label className="vc-label">Frame Rate (fps)</label>
+                    <input className="vc-input" type="number" min={1} max={240} step={0.001}
+                      placeholder="Original"
+                      value={advFramerate} onChange={(e) => setAdvFramerate(e.target.value)} />
+                    <span className="vc-input-hint">e.g. 23.976, 25, 29.97, 60</span>
+                  </div>
+                  <div className="vc-field">
+                    <label className="vc-label">CRF Quality (0–51)</label>
+                    <input className={`vc-input${!advCrfValid ? " vc-input--error" : ""}`}
+                      type="number" min={0} max={51} placeholder="23 (default)"
+                      value={advCrf} onChange={(e) => setAdvCrf(e.target.value)} />
+                    {!advCrfValid
+                      ? <span className="vc-input-hint vc-input-hint--error">Must be 0–51 (lower = better quality)</span>
+                      : <span className="vc-input-hint">0 = lossless · 18 = visually lossless · 23 = default · 51 = worst</span>
+                    }
+                  </div>
+                  <div className="vc-field">
+                    <label className="vc-label">
+                      Encoding Preset
+                      {outputFormat === "webm" && (
+                        <span style={{ fontWeight: 400, textTransform: "none", opacity: .65, marginLeft: 6 }}>· not used for WebM</span>
+                      )}
+                    </label>
+                    <select className="vc-select" value={preset}
+                      onChange={(e) => setPreset(e.target.value as PresetValue)}
+                      disabled={outputFormat === "webm"}>
+                      <option value="ultrafast">ultrafast</option>
+                      <option value="veryfast">veryfast</option>
+                      <option value="faster">faster</option>
+                      <option value="fast">fast</option>
+                      <option value="medium">medium (default)</option>
+                      <option value="slow">slow</option>
+                      <option value="slower">slower</option>
+                      <option value="veryslow">veryslow</option>
+                    </select>
+                  </div>
+                  <div className="vc-field">
+                    <label className="vc-label">Audio Bitrate (kbps)</label>
+                    <input className={`vc-input${!advAudioValid ? " vc-input--error" : ""}`}
+                      type="number" min={1} max={9999} placeholder="Auto (copy source)"
+                      value={advAudioBitrate} onChange={(e) => setAdvAudioBitrate(e.target.value)} />
+                    {!advAudioValid
+                      ? <span className="vc-input-hint vc-input-hint--error">Must be a positive number in kbps</span>
+                      : <span className="vc-input-hint">Common: 96, 128, 192, 256, 320</span>
+                    }
+                  </div>
+                </>
+              )}
             </div>
 
             {/* ── Submit ───────────────────────────────────────────────── */}
             <button className="vc-btn" type="submit" disabled={!file || isBusy}>
+            <button className="vc-btn" type="submit" disabled={!canSubmit}>
               {isBusy ? "Working…" : "Convert Video"}
             </button>
           </form>

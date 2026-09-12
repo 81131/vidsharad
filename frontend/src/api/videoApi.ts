@@ -17,6 +17,8 @@ export async function uploadVideo(file: File, params: ConversionParams): Promise
   formData.append("preset", params.preset ?? "medium");
   if (params.audioBitrate !== undefined)
     formData.append("audio_bitrate", String(params.audioBitrate));
+  if (params.codec)
+    formData.append("codec", params.codec);
 
   const res = await fetch(`${API_BASE}/upload`, {
     method: "POST",
