@@ -12,7 +12,7 @@ class JobStatus(str, Enum):
 
 class ConversionParams(BaseModel):
     output_format: str = "mp4"
-    framerate: Optional[int] = None
+    framerate: Optional[float] = None
     resolution: Optional[str] = None       # e.g. "1920x1080"
     crf: Optional[int] = 23               # lower = higher quality, larger file
     preset: str = "medium"                # encoding speed/compression trade-off

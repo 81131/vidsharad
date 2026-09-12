@@ -6,7 +6,7 @@ export type PresetValue =
 
 export interface ConversionParams {
   outputFormat: string;
-  framerate?: number;
+  framerate?: number;  // fps, can be float e.g. 23.976
   resolution?: string;
   crf?: number;
   preset?: PresetValue;

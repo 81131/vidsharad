@@ -122,7 +122,7 @@ async def upload_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     output_format: str = Form("mp4"),
-    framerate: Optional[int] = Form(None),
+    framerate: Optional[float] = Form(None),
     resolution: Optional[str] = Form(None),
     crf: Optional[int] = Form(23),
     preset: str = Form("medium"),
