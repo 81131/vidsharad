@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { uploadVideo, getJobStatus, getDownloadUrl, getSystemInfo } from "../api/videoApi";
 import type { JobResponse, VideoInfo, SystemInfo, PresetValue } from "../types/job";
+import {
+  Clapperboard,
+  Video,
+  FolderOpen,
+  Settings,
+  CheckCircle,
+  Download,
+  AlertTriangle,
+} from "lucide-react";
 
 type Stage = "idle" | "uploading" | "processing" | "completed" | "failed";
 
@@ -61,7 +70,7 @@ const css = `
 }
 .vc-dropzone:hover, .vc-dropzone--over { border-color: var(--accent); background: var(--accent-light); }
 .vc-dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-.vc-dz-icon  { font-size: 30px; margin-bottom: 6px; }
+.vc-dz-icon  { display: flex; justify-content: center; margin-bottom: 8px; color: var(--text); opacity: .5; }
 .vc-dz-label { font-size: 14px; font-weight: 600; color: var(--text-h); margin-bottom: 3px; }
 .vc-dz-hint  { font-size: 12px; color: var(--text); }
 .vc-dz-filename {
@@ -113,7 +122,7 @@ const css = `
 .vc-status--info    { background: var(--accent-light);  color: var(--accent); }
 .vc-status--success { background: var(--success-light); color: var(--success); }
 .vc-status--error   { background: var(--error-light);   color: var(--error); }
-.vc-status__icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+.vc-status__icon { display: flex; align-items: center; flex-shrink: 0; margin-top: 1px; }
 .vc-status__text { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
 .vc-status__label  { font-weight: 600; }
 .vc-status__detail { font-size: 12px; opacity: .85; }
@@ -324,7 +333,9 @@ export default function UploadForm() {
         <div className="vc-body">
           {/* ── Header ───────────────────────────────────────────────── */}
           <div className="vc-header">
-            <div className="vc-title">🎬 Video Converter</div>
+            <div className="vc-title" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Clapperboard size={20} /> Video Converter
+            </div>
             <div className="vc-subtitle">Convert, resize, and compress videos in your browser</div>
           </div>
 
@@ -337,7 +348,9 @@ export default function UploadForm() {
               onDrop={handleDrop}
             >
               <input type="file" accept="video/*" onChange={(e) => pickFile(e.target.files?.[0])} />
-              <div className="vc-dz-icon">{file ? "🎥" : "📂"}</div>
+              <div className="vc-dz-icon">
+                {file ? <Video size={32} /> : <FolderOpen size={32} />}
+              </div>
               <div className="vc-dz-label">{file ? "File selected" : "Drop your video here"}</div>
               <div className="vc-dz-hint">{file ? "" : "or click to browse"}</div>
               {file && <div className="vc-dz-filename">{file.name}</div>}
@@ -400,7 +413,10 @@ export default function UploadForm() {
               <button type="button" className={`vc-mode-btn${!advancedMode ? " vc-mode-btn--active" : ""}`}
                 onClick={() => setAdvancedMode(false)}>Basic</button>
               <button type="button" className={`vc-mode-btn${advancedMode ? " vc-mode-btn--active" : ""}`}
-                onClick={() => setAdvancedMode(true)}>⚙ Advanced</button>
+                onClick={() => setAdvancedMode(true)}
+                style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <Settings size={12} /> Advanced
+              </button>
             </div>
 
             {/* ── Options ──────────────────────────────────────────────── */}
@@ -633,21 +649,21 @@ export default function UploadForm() {
           {stage === "completed" && jobId && (
             <>
               <div className="vc-status vc-status--success">
-                <span className="vc-status__icon">✅</span>
+                <span className="vc-status__icon"><CheckCircle size={18} /></span>
                 <div className="vc-status__text">
                   <span className="vc-status__label">Conversion complete!</span>
                   <span className="vc-status__detail">Your file is ready to download</span>
                 </div>
               </div>
               <a className="vc-download" href={getDownloadUrl(jobId)} download>
-                ⬇ Download converted video
+                <Download size={17} /> Download converted video
               </a>
             </>
           )}
 
           {stage === "failed" && (
             <div className="vc-status vc-status--error">
-              <span className="vc-status__icon">⚠️</span>
+              <span className="vc-status__icon"><AlertTriangle size={18} /></span>
               <div className="vc-status__text">
                 <span className="vc-status__label">Something went wrong</span>
                 <span className="vc-status__detail">{error}</span>
