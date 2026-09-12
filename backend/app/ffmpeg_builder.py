@@ -88,7 +88,6 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
     if params.framerate:
         output_kwargs["r"] = params.framerate
 
-    vcodec = _FORMAT_CODEC_MAP.get(params.output_format, "libx264")
     # Resolve video codec:
     # Advanced mode can supply an explicit codec that overrides the format map.
     if params.codec:
@@ -97,39 +96,27 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
         vcodec = _FORMAT_CODEC_MAP.get(params.output_format, "libx264")
     output_kwargs["vcodec"] = vcodec
 
-    # Quality flag differs per encoder
-    if params.crf is not None:
-        if vcodec == "h264_nvenc":
     # Quality flag — use substring checks so h264_nvenc, hevc_nvenc, h264_qsv,
     # hevc_qsv etc. all resolve correctly regardless of what the user typed.
     # "copy" codec skips quality entirely.
-            if params.crf is not None and vcodec != "copy":
-                if "nvenc" in vcodec:
-                    output_kwargs["cq"] = params.crf
-                elif vcodec == "h264_qsv":
-                    output_kwargs["q"] = params.crf
-                elif "qsv" in vcodec:
-                    output_kwargs["q"] = params.crf
-                elif vcodec == "libvpx-vp9":
-                    output_kwargs["crf"] = params.crf
-                    output_kwargs["b:v"] = "0"
-                else:
-                    output_kwargs["crf"] = params.crf
+    if params.crf is not None and vcodec != "copy":
+        if "nvenc" in vcodec:
+            output_kwargs["cq"] = params.crf
+        elif "qsv" in vcodec:
+            output_kwargs["global_quality"] = params.crf
+        elif vcodec == "libvpx-vp9":
+            output_kwargs["crf"] = params.crf
+            output_kwargs["b:v"] = "0"
+        else:
+            output_kwargs["crf"] = params.crf
 
-    # Preset: controls the compression/speed trade-off.
-    # Slower = better compression at the same quality level, smaller file.
-    # libx264 and h264_qsv accept the named preset directly;
-    # h264_nvenc uses a numeric p-scale; VP9 has its own cpu-used param
-    # so we leave preset out entirely for WebM.
-    if params.preset and vcodec != "libvpx-vp9":
-        if vcodec == "h264_nvenc":
     # Preset — same substring approach.
     # VP9 (libvpx-vp9) has its own cpu-used scale; skip preset for it and "copy".
-            if params.preset and vcodec not in ("libvpx-vp9", "copy"):
-                if "nvenc" in vcodec:
-                    output_kwargs["preset"] = _NVENC_PRESET_MAP.get(params.preset, "p4")
-                else:
-                    output_kwargs["preset"] = params.preset
+    if params.preset and vcodec not in ("libvpx-vp9", "copy"):
+        if "nvenc" in vcodec:
+            output_kwargs["preset"] = _NVENC_PRESET_MAP.get(params.preset, "p4")
+        else:
+            output_kwargs["preset"] = params.preset
 
     # Audio: when audio_bitrate is None we let FFmpeg copy or auto-select
     # the audio stream (no flags at all). When set, we must also force an
@@ -137,7 +124,6 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
     # container/source combinations.
     #   MP4/MKV → AAC  (universally supported, good quality)
     #   WebM    → Opus (modern, better quality/size than Vorbis)
-    # Audio
     _FORMAT_AUDIO_CODEC_MAP = {
         "mp4":  "aac",
         "mkv":  "aac",
@@ -147,8 +133,6 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
         output_kwargs["acodec"] = _FORMAT_AUDIO_CODEC_MAP.get(params.output_format, "aac")
         output_kwargs["b:a"] = f"{params.audio_bitrate}k"
 
-    # Merge any encoder-specific extra kwargs from detection
-    output_kwargs.update({k: v for k, v in h264_extra.items() if v is not None})
     # Only merge GPU-detected extra kwargs when the codec actually matches the
     # detected h264 encoder — avoids passing NVENC flags to libx265 / copy / etc.
     if vcodec == h264_encoder:
