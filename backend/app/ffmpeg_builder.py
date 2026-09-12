@@ -103,17 +103,18 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
     # Quality flag — use substring checks so h264_nvenc, hevc_nvenc, h264_qsv,
     # hevc_qsv etc. all resolve correctly regardless of what the user typed.
     # "copy" codec skips quality entirely.
-    if params.crf is not None and vcodec != "copy":
-        if "nvenc" in vcodec:
-            output_kwargs["cq"] = params.crf
-        elif vcodec == "h264_qsv":
-        elif "qsv" in vcodec:
-            output_kwargs["q"] = params.crf
-        elif vcodec == "libvpx-vp9":
-            output_kwargs["crf"] = params.crf
-            output_kwargs["b:v"] = "0"
-        else:
-            output_kwargs["crf"] = params.crf
+            if params.crf is not None and vcodec != "copy":
+                if "nvenc" in vcodec:
+                    output_kwargs["cq"] = params.crf
+                elif vcodec == "h264_qsv":
+                    output_kwargs["q"] = params.crf
+                elif "qsv" in vcodec:
+                    output_kwargs["q"] = params.crf
+                elif vcodec == "libvpx-vp9":
+                    output_kwargs["crf"] = params.crf
+                    output_kwargs["b:v"] = "0"
+                else:
+                    output_kwargs["crf"] = params.crf
 
     # Preset: controls the compression/speed trade-off.
     # Slower = better compression at the same quality level, smaller file.
@@ -124,11 +125,11 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
         if vcodec == "h264_nvenc":
     # Preset — same substring approach.
     # VP9 (libvpx-vp9) has its own cpu-used scale; skip preset for it and "copy".
-    if params.preset and vcodec not in ("libvpx-vp9", "copy"):
-        if "nvenc" in vcodec:
-            output_kwargs["preset"] = _NVENC_PRESET_MAP.get(params.preset, "p4")
-        else:
-            output_kwargs["preset"] = params.preset
+            if params.preset and vcodec not in ("libvpx-vp9", "copy"):
+                if "nvenc" in vcodec:
+                    output_kwargs["preset"] = _NVENC_PRESET_MAP.get(params.preset, "p4")
+                else:
+                    output_kwargs["preset"] = params.preset
 
     # Audio: when audio_bitrate is None we let FFmpeg copy or auto-select
     # the audio stream (no flags at all). When set, we must also force an
