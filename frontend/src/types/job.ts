@@ -11,6 +11,7 @@ export interface ConversionParams {
   crf?: number;
   preset?: PresetValue;
   audioBitrate?: number;  // kbps. undefined = auto/copy
+  codec?: string;         // advanced mode: override video codec
 }
 
 export interface VideoInfo {
