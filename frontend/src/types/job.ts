@@ -10,6 +10,7 @@ export interface ConversionParams {
   resolution?: string;
   crf?: number;
   preset?: PresetValue;
+  audioBitrate?: number;  // kbps. undefined = auto/copy
 }
 
 export interface VideoInfo {
