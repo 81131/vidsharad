@@ -41,12 +41,11 @@ def _probe_video(path: str) -> Optional[VideoInfo]:
     try:
         info = ffmpeg.probe(path)
         fmt = info.get("format", {})
+        streams = info.get("streams", [])
 
-        # Find the first video stream (files can have multiple audio/video streams)
-        video_stream = next(
-            (s for s in info.get("streams", []) if s.get("codec_type") == "video"),
-            None,
-        )
+        # Find the first video and audio streams
+        video_stream = next((s for s in streams if s.get("codec_type") == "video"), None)
+        audio_stream = next((s for s in streams if s.get("codec_type") == "audio"), None)
 
         fps: Optional[float] = None
         if video_stream:
@@ -54,8 +53,15 @@ def _probe_video(path: str) -> Optional[VideoInfo]:
             num, den = r.split("/")
             fps = round(int(num) / int(den), 2) if int(den) > 0 else None
 
-        raw_bitrate = int(fmt.get("bit_rate", 0))
-        raw_duration = float(fmt.get("duration", 0))
+        def _kbps(stream_or_fmt: dict, key: str = "bit_rate") -> Optional[int]:
+            raw = int(stream_or_fmt.get(key, 0) or 0)
+            return raw // 1000 if raw else None
+
+        # Prefer per-stream bitrates; fall back to format-level for video
+        video_bitrate = _kbps(video_stream) if video_stream else _kbps(fmt)
+        audio_bitrate = _kbps(audio_stream) if audio_stream else None
+
+        raw_duration = float(fmt.get("duration", 0) or 0)
 
         return VideoInfo(
             codec=video_stream.get("codec_name") if video_stream else None,
@@ -63,8 +69,9 @@ def _probe_video(path: str) -> Optional[VideoInfo]:
             height=video_stream.get("height") if video_stream else None,
             fps=fps,
             duration_sec=round(raw_duration, 2),
-            bitrate_kbps=raw_bitrate // 1000 if raw_bitrate else None,
-            size_bytes=int(fmt.get("size", 0)) or None,
+            video_bitrate_kbps=video_bitrate,
+            audio_bitrate_kbps=audio_bitrate,
+            size_bytes=int(fmt.get("size", 0) or 0) or None,
             format_name=fmt.get("format_name", "").split(",")[0] or None,
         )
     except Exception:
@@ -83,6 +90,31 @@ def system_info():
         "gpu_available": H264_ENCODER != "libx264",
         "encoder": H264_ENCODER,
     }
+
+
+@app.post("/probe", response_model=VideoInfo)
+async def probe_video(file: UploadFile = File(...)):
+    """
+    Accepts a video file, probes its metadata with ffprobe, then deletes
+    the temp file. Used by the frontend to show video info immediately
+    after file selection, before the user starts a conversion.
+    """
+    tmp_id = str(uuid.uuid4())
+    filename = file.filename or "upload"
+    ext = filename.rsplit(".", 1)[-1] if "." in filename else "bin"
+    tmp_path = os.path.join(UPLOAD_DIR, f"probe_{tmp_id}.{ext}")
+
+    try:
+        with open(tmp_path, "wb") as buf:
+            shutil.copyfileobj(file.file, buf)
+        info = _probe_video(tmp_path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    if info is None:
+        raise HTTPException(status_code=422, detail="Could not read video metadata")
+    return info
 
 
 @app.post("/upload", response_model=JobResponse)

@@ -13,10 +13,6 @@ class JobStatus(str, Enum):
 class ConversionParams(BaseModel):
     output_format: str = "mp4"
     framerate: Optional[int] = None
-    resolution: Optional[str] = None  # e.g. "1920x1080"
-    crf: Optional[int] = 23           # lower = higher quality, larger file
-    preset: str = "medium"            # encoding speed/compression trade-off
-    audio_bitrate: Optional[int] = None  # kbps, e.g. 128. None = auto/copy
     resolution: Optional[str] = None       # e.g. "1920x1080"
     crf: Optional[int] = 23               # lower = higher quality, larger file
     preset: str = "medium"                # encoding speed/compression trade-off
@@ -26,14 +22,15 @@ class ConversionParams(BaseModel):
 
 class VideoInfo(BaseModel):
     """Metadata probed from the uploaded video using ffprobe."""
-    codec: Optional[str] = None          # e.g. "h264"
-    width: Optional[int] = None          # pixels
-    height: Optional[int] = None         # pixels
-    fps: Optional[float] = None          # frames per second
-    duration_sec: Optional[float] = None # total length in seconds
-    bitrate_kbps: Optional[int] = None   # overall bitrate in kbps
-    size_bytes: Optional[int] = None     # file size
-    format_name: Optional[str] = None    # container format e.g. "mp4"
+    codec: Optional[str] = None              # e.g. "h264"
+    width: Optional[int] = None              # pixels
+    height: Optional[int] = None             # pixels
+    fps: Optional[float] = None              # frames per second
+    duration_sec: Optional[float] = None     # total length in seconds
+    video_bitrate_kbps: Optional[int] = None # video stream bitrate in kbps
+    audio_bitrate_kbps: Optional[int] = None # audio stream bitrate in kbps
+    size_bytes: Optional[int] = None         # file size in bytes
+    format_name: Optional[str] = None        # container format e.g. "mp4"
 
 
 class JobResponse(BaseModel):

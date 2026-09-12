@@ -1,9 +1,17 @@
-import type { ConversionParams, JobResponse, SystemInfo } from "../types/job";
+import type { ConversionParams, JobResponse, VideoInfo, SystemInfo } from "../types/job";
 const API_BASE = "/api";
 
 export async function getSystemInfo(): Promise<SystemInfo> {
   const res = await fetch(`${API_BASE}/system`);
   if (!res.ok) throw new Error("Failed to fetch system info");
+  return res.json();
+}
+
+export async function probeVideo(file: File): Promise<VideoInfo> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_BASE}/probe`, { method: "POST", body: formData });
+  if (!res.ok) throw new Error("Probe failed");
   return res.json();
 }
 

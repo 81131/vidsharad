@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { uploadVideo, getJobStatus, getDownloadUrl, getSystemInfo } from "../api/videoApi";
+import { uploadVideo, probeVideo, getJobStatus, getDownloadUrl, getSystemInfo } from "../api/videoApi";
 import type { JobResponse, VideoInfo, SystemInfo, PresetValue } from "../types/job";
 import {
   Clapperboard,
@@ -236,6 +236,7 @@ export default function UploadForm() {
 
   // System info
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [isProbing, setIsProbing]   = useState(false);
 
   const pollRef = useRef<number | null>(null);
 
@@ -248,14 +249,13 @@ export default function UploadForm() {
     if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
   }
 
-  // Poll job status every 2 s; read progress and video_info from each response
+  // Poll job status every 2 s; read progress from each response
   useEffect(() => {
     if (!jobId) return;
     pollRef.current = window.setInterval(async () => {
       try {
         const job: JobResponse = await getJobStatus(jobId);
         if (job.progress != null) setProgress(job.progress);
-        if (job.video_info)       setVideoInfo(job.video_info);
 
         if (job.status === "completed") { setStage("completed"); clearPolling(); }
         else if (job.status === "failed") {
@@ -268,8 +268,21 @@ export default function UploadForm() {
     return clearPolling;
   }, [jobId]);
 
-  const pickFile = useCallback((f: File | null | undefined) => {
-    if (f) { setFile(f); setVideoInfo(null); setProgress(0); }
+  // Probe the file immediately on select so the stats panel appears right away
+  const pickFile = useCallback(async (f: File | null | undefined) => {
+    if (!f) return;
+    setFile(f);
+    setVideoInfo(null);
+    setProgress(0);
+    setIsProbing(true);
+    try {
+      const info = await probeVideo(f);
+      setVideoInfo(info);
+    } catch {
+      // Probe failure is non-fatal — user can still convert
+    } finally {
+      setIsProbing(false);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -280,7 +293,8 @@ export default function UploadForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!file) return;
-    setStage("uploading"); setError(null); setProgress(0); setVideoInfo(null);
+    // Keep videoInfo visible during conversion — don't clear it here
+    setStage("uploading"); setError(null); setProgress(0);
     try {
       let params;
       if (advancedMode) {
@@ -312,7 +326,7 @@ export default function UploadForm() {
   }
 
   const isBusy = stage === "uploading" || stage === "processing";
-  const canSubmit = !!file && !isBusy && (!advancedMode || advFormValid);
+  const canSubmit = !!file && !isBusy && !isProbing && (!advancedMode || advFormValid);
 
   return (
     <>
@@ -357,7 +371,15 @@ export default function UploadForm() {
             </div>
 
             {/* ── Video stats ──────────────────────────────────────────── */}
-            {videoInfo && (
+            {isProbing && (
+              <div className="vc-stats" style={{ opacity: .5 }}>
+                <div className="vc-stats__item">
+                  <span className="vc-stats__lbl">Analysing</span>
+                  <span className="vc-stats__val">Reading file…</span>
+                </div>
+              </div>
+            )}
+            {!isProbing && videoInfo && (
               <div className="vc-stats">
                 {videoInfo.codec && (
                   <div className="vc-stats__item">
@@ -377,14 +399,20 @@ export default function UploadForm() {
                     <span className="vc-stats__val">{videoInfo.fps} fps</span>
                   </div>
                 )}
-                {videoInfo.bitrate_kbps && (
+                {videoInfo.video_bitrate_kbps && (
                   <div className="vc-stats__item">
-                    <span className="vc-stats__lbl">Bitrate</span>
+                    <span className="vc-stats__lbl">Video Bitrate</span>
                     <span className="vc-stats__val">
-                      {videoInfo.bitrate_kbps >= 1000
-                        ? `${(videoInfo.bitrate_kbps / 1000).toFixed(1)} Mbps`
-                        : `${videoInfo.bitrate_kbps} kbps`}
+                      {videoInfo.video_bitrate_kbps >= 1000
+                        ? `${(videoInfo.video_bitrate_kbps / 1000).toFixed(1)} Mbps`
+                        : `${videoInfo.video_bitrate_kbps} kbps`}
                     </span>
+                  </div>
+                )}
+                {videoInfo.audio_bitrate_kbps && (
+                  <div className="vc-stats__item">
+                    <span className="vc-stats__lbl">Audio Bitrate</span>
+                    <span className="vc-stats__val">{videoInfo.audio_bitrate_kbps} kbps</span>
                   </div>
                 )}
                 {videoInfo.duration_sec && (

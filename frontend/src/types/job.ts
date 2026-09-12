@@ -20,7 +20,8 @@ export interface VideoInfo {
   height?: number;
   fps?: number;
   duration_sec?: number;
-  bitrate_kbps?: number;
+  video_bitrate_kbps?: number;
+  audio_bitrate_kbps?: number;
   size_bytes?: number;
   format_name?: string;
 }
