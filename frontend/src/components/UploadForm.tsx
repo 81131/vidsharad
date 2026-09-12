@@ -273,15 +273,6 @@ export default function UploadForm() {
     if (!file) return;
     setStage("uploading"); setError(null); setProgress(0); setVideoInfo(null);
     try {
-      const job = await uploadVideo(file, {
-        outputFormat,
-        resolution: resolution || undefined,
-        framerate: framerate ? Number(framerate) : undefined,
-        crf,
-        preset,
-        audioBitrate: audioBitrate ?? undefined,
-      });
-      // video_info comes back immediately from the upload response
       let params;
       if (advancedMode) {
         const advRes = bothFilled ? `${wNum}x${hNum}` : undefined;
@@ -414,89 +405,6 @@ export default function UploadForm() {
 
             {/* ── Options ──────────────────────────────────────────────── */}
             <div className="vc-options">
-              <div className="vc-field">
-                <label className="vc-label">Output Format</label>
-                <select className="vc-select" value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)}>
-                  <option value="mp4">MP4 (H.264)</option>
-                  <option value="mkv">MKV (H.264)</option>
-                  <option value="webm">WebM (VP9)</option>
-                </select>
-              </div>
-              <div className="vc-field">
-                <label className="vc-label">Resolution</label>
-                <select className="vc-select" value={resolution} onChange={(e) => setResolution(e.target.value)}>
-                  <option value="">Original</option>
-                  <option value="1920x1080">1080p</option>
-                  <option value="1280x720">720p</option>
-                  <option value="854x480">480p</option>
-                </select>
-              </div>
-              <div className="vc-field">
-                <label className="vc-label">Frame Rate</label>
-                <select className="vc-select" value={framerate} onChange={(e) => setFramerate(e.target.value)}>
-                  <option value="">Original</option>
-                  <option value="24">24 fps</option>
-                  <option value="30">30 fps</option>
-                  <option value="60">60 fps</option>
-                </select>
-              </div>
-              <div className="vc-field">
-                <label className="vc-label">Quality (CRF {crf})</label>
-                <div className="vc-slider-row">
-                  <span style={{ fontSize: 11 }}>Best</span>
-                  <input className="vc-slider" type="range" min={18} max={32} value={crf}
-                    onChange={(e) => setCrf(Number(e.target.value))} />
-                  <span style={{ fontSize: 11 }}>Smallest</span>
-                </div>
-              </div>
-              {/* Preset spans both columns */}
-              <div className="vc-field" style={{ gridColumn: "1 / -1" }}>
-                <label className="vc-label">
-                  Encoding Preset
-                  {outputFormat === "webm" && (
-                    <span style={{ fontWeight: 400, textTransform: "none", opacity: .65, marginLeft: 6 }}>
-                      · not used for WebM
-                    </span>
-                  )}
-                </label>
-                <select
-                  className="vc-select"
-                  value={preset}
-                  onChange={(e) => setPreset(e.target.value as PresetValue)}
-                  disabled={outputFormat === "webm"}
-                >
-                  <option value="ultrafast">Ultrafast · largest file, fastest encode</option>
-                  <option value="veryfast">Very Fast</option>
-                  <option value="faster">Faster</option>
-                  <option value="fast">Fast</option>
-                  <option value="medium">Medium · balanced (default)</option>
-                  <option value="slow">Slow · better compression</option>
-                  <option value="slower">Slower</option>
-                  <option value="veryslow">Very Slow · smallest file, slowest encode</option>
-                </select>
-              </div>
-              {/* Audio bitrate spans both columns */}
-              <div className="vc-field" style={{ gridColumn: "1 / -1" }}>
-                <label className="vc-label">
-                  Audio Bitrate
-                  <span style={{ fontWeight: 400, textTransform: "none", opacity: .65, marginLeft: 6 }}>
-                    · {outputFormat === "webm" ? "Opus" : "AAC"}
-                  </span>
-                </label>
-                <select
-                  className="vc-select"
-                  value={audioBitrate ?? ""}
-                  onChange={(e) => setAudioBitrate(e.target.value === "" ? null : Number(e.target.value))}
-                >
-                  <option value="">Auto (copy source audio)</option>
-                  <option value="64">64 kbps · voice / podcast</option>
-                  <option value="96">96 kbps · compact stereo</option>
-                  <option value="128">128 kbps · standard stereo</option>
-                  <option value="192">192 kbps · high quality</option>
-                  <option value="256">256 kbps · near-transparent</option>
-                  <option value="320">320 kbps · maximum</option>
-                </select>
-              </div>
               {!advancedMode ? (
                 <>
                   {/* ── BASIC controls ────────────────────────────── */}
@@ -687,7 +595,6 @@ export default function UploadForm() {
             </div>
 
             {/* ── Submit ───────────────────────────────────────────────── */}
-            <button className="vc-btn" type="submit" disabled={!file || isBusy}>
             <button className="vc-btn" type="submit" disabled={!canSubmit}>
               {isBusy ? "Working…" : "Convert Video"}
             </button>
