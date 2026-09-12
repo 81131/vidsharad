@@ -114,6 +114,21 @@ def build_output_kwargs(params: ConversionParams, h264_encoder: str, h264_extra:
         else:
             output_kwargs["preset"] = params.preset
 
+    # Audio: when audio_bitrate is None we let FFmpeg copy or auto-select
+    # the audio stream (no flags at all). When set, we must also force an
+    # explicit audio codec — FFmpeg will reject -b:a without one in many
+    # container/source combinations.
+    #   MP4/MKV → AAC  (universally supported, good quality)
+    #   WebM    → Opus (modern, better quality/size than Vorbis)
+    _FORMAT_AUDIO_CODEC_MAP = {
+        "mp4":  "aac",
+        "mkv":  "aac",
+        "webm": "libopus",
+    }
+    if params.audio_bitrate is not None:
+        output_kwargs["acodec"] = _FORMAT_AUDIO_CODEC_MAP.get(params.output_format, "aac")
+        output_kwargs["b:a"] = f"{params.audio_bitrate}k"
+
     # Merge any encoder-specific extra kwargs from detection
     output_kwargs.update({k: v for k, v in h264_extra.items() if v is not None})
 
