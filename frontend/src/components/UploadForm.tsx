@@ -158,6 +158,7 @@ export default function UploadForm() {
   const [framerate, setFramerate]       = useState("");
   const [crf, setCrf]                   = useState(23);
   const [preset, setPreset]             = useState<PresetValue>("medium");
+  const [audioBitrate, setAudioBitrate] = useState<number | null>(null); // null = auto
 
   // Job state
   const [stage, setStage]       = useState<Stage>("idle");
@@ -220,6 +221,7 @@ export default function UploadForm() {
         framerate: framerate ? Number(framerate) : undefined,
         crf,
         preset,
+        audioBitrate: audioBitrate ?? undefined,
       });
       // video_info comes back immediately from the upload response
       if (job.video_info) setVideoInfo(job.video_info);
@@ -381,6 +383,28 @@ export default function UploadForm() {
                   <option value="slow">Slow · better compression</option>
                   <option value="slower">Slower</option>
                   <option value="veryslow">Very Slow · smallest file, slowest encode</option>
+                </select>
+              </div>
+              {/* Audio bitrate spans both columns */}
+              <div className="vc-field" style={{ gridColumn: "1 / -1" }}>
+                <label className="vc-label">
+                  Audio Bitrate
+                  <span style={{ fontWeight: 400, textTransform: "none", opacity: .65, marginLeft: 6 }}>
+                    · {outputFormat === "webm" ? "Opus" : "AAC"}
+                  </span>
+                </label>
+                <select
+                  className="vc-select"
+                  value={audioBitrate ?? ""}
+                  onChange={(e) => setAudioBitrate(e.target.value === "" ? null : Number(e.target.value))}
+                >
+                  <option value="">Auto (copy source audio)</option>
+                  <option value="64">64 kbps · voice / podcast</option>
+                  <option value="96">96 kbps · compact stereo</option>
+                  <option value="128">128 kbps · standard stereo</option>
+                  <option value="192">192 kbps · high quality</option>
+                  <option value="256">256 kbps · near-transparent</option>
+                  <option value="320">320 kbps · maximum</option>
                 </select>
               </div>
             </div>
